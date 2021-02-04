@@ -1,0 +1,23 @@
+Conditions:
+  condIsProd: !Equals [ !Ref paramEnvironment, prod ]
+  condNotFeatureBranch: !Equals [!Ref paramFeatureBranch, ""]
+  condIsLocal: !Equals [ !Ref paramEnvironment, local ]
+  condIsLocalOrBranch: !Or [ !Not [ Condition: condNotFeatureBranch ], Condition: condIsLocal ]
+
+
+Resources:
+
+  resLambdaConvertPicture:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: ConvertPicture.handler
+      FunctionName: !Sub "${paramEnvironment}${paramFeatureBranch}_${paramServiceName}_ConvertPicture"
+      CodeUri: dist/ConvertPicture.js
+      Policies:
+        - SNSPublishMessagePolicy:
+            TopicName: !If
+              - condIsLocalOrBranch
+              - !Sub "${paramEnvironment}${paramFeatureBranch}_${paramServiceName}-ts_catalog_pictureUploaded"
+              - !Sub "${paramEnvironment}${paramFeatureBranch}_catalog_PictureUploaded"
+        - DynamoDBCrudPolicy:
+            TableName: !Ref resDynamoMenuJobsTable
